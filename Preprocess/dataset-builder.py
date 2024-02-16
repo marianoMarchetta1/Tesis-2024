@@ -174,8 +174,9 @@ def obtener_whale_alerts_binance(start_time, end_time, moneda, umbral, precio_hi
             precio_historico_filtered = precio_historico[precio_historico['Open_time'].dt.date == fecha_formato]
             high_value = float(precio_historico_filtered['High'].max())
             
-            print(fecha_formato)
-            print(precio_historico['Open_time'].dt.date)
+            print(f"Fecha sobre la que voy a calcular los whales: {fecha_formato}")
+            print(f"Fecha del mayor precio para ese dia {precio_historico['Open_time'].dt.date}")
+            print(f"Mayor precio para ese dia: {float(precio_historico_filtered['High'].max())}")
             
             buy_1000x_high = sum(1 for trade in trades if trade['m'] and float(trade['p']) * float(trade['q']) > high_value * umbral)
             sell_1000x_high = sum(1 for trade in trades if not trade['m'] and float(trade['p']) * float(trade['q']) > high_value * umbral)
@@ -232,8 +233,8 @@ interval = '1d'  # Obtener datos diarios
 # porque algunos indicadores tecnicos necesitan hasta 33 dias previos para ser calculados,
 # sino me sucede que los primeros dias de la serie tienen ciertos indicadores en NaN.
 # A su vez, le agrego un dia mas a la resta por el formato UTC de la API de binance
-margin_days = 0 # 40 días de margen para los indicadores tecnicos
-wanted_previous_dates = 0 # 2 años
+margin_days = 40 # 40 días de margen para los indicadores tecnicos
+wanted_previous_dates = 730 # 2 años
 start_time = int((fecha_especifica - timedelta(days=(margin_days + wanted_previous_dates + 1))).timestamp() * 1000)
 end_time = int((fecha_especifica + timedelta(days=(1))).timestamp() * 1000)
 
