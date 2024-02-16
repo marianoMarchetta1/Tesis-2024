@@ -9,17 +9,21 @@ import pytz
 #Obtengo toda la data cruda. Sera responsabilidad de otra funcion realizar las normalizaciones y limpiezas necesarias
 def generar_dataset(interval, start_time, end_time, par="BTCUSDT", moneda="BTC", monedas_lideres=['BTCUSDT', 'ETHUSDT', 'BNBUSDT']):
     histórico_precio = obtener_historico_precio(interval, start_time, end_time, par)
+    guardar_dataset_en_csv(histórico_precio, name="histórico_precio.csv")
+
     histórico_precio_influyentes = obtener_histórico_precio_influyentes(interval, start_time, end_time, monedas_lideres)
+    guardar_dataset_en_csv(histórico_precio_influyentes, name="histórico_precio_influyentes.csv")
+
     indicadores_tecnicos = calcular_indicadores_tecnicos(histórico_precio)
-    whale_alerts_binance = obtener_whale_alerts_binance(start_time, end_time, moneda, 100000, histórico_precio)
+    guardar_dataset_en_csv(indicadores_tecnicos, name="indicadores_tecnicos.csv")
+
+    whale_alerts_binance = obtener_whale_alerts_binance(start_time, end_time, moneda, 1000, histórico_precio)
+    guardar_dataset_en_csv(whale_alerts_binance, name="whale_alerts_binance.csv")
+
     sentimiento_general = obtener_sentimiento_general()
     sentimiento_moneda = obtener_sentimiento_moneda(moneda)
     sentimiento_individuos = obtener_sentimiento_individuos()
     
-    guardar_dataset_en_csv(histórico_precio, name="histórico_precio.csv")
-    guardar_dataset_en_csv(histórico_precio_influyentes, name="histórico_precio_influyentes.csv")
-    guardar_dataset_en_csv(indicadores_tecnicos, name="indicadores_tecnicos.csv")
-    guardar_dataset_en_csv(whale_alerts_binance, name="whale_alerts_binance.csv")
     
     dataset = pd.merge(histórico_precio, histórico_precio_influyentes, on='Open_time', how='outer')
     dataset = pd.merge(dataset, indicadores_tecnicos, on='Open_time', how='outer')
@@ -224,17 +228,16 @@ def obtener_historico_precio(interval, start_time, end_time, binance_symbol):
 # Establecer la fecha específica al 14 de febrero de 2024
 fecha_especifica = datetime(2024, 2, 14)
 
-utc_timezone = pytz.timezone('UTC')
+
 binance_symbol = 'DOTUSDT'
-symbol = 'btc'
 interval = '1d'  # Obtener datos diarios
 # Retroceder 2 años desde la fecha específica y convertir a milisegundos
 # A mi me interesa tomar 730 dias (2 años), a eso le agrego 40 dias mas,
 # porque algunos indicadores tecnicos necesitan hasta 33 dias previos para ser calculados,
 # sino me sucede que los primeros dias de la serie tienen ciertos indicadores en NaN.
 # A su vez, le agrego un dia mas a la resta por el formato UTC de la API de binance
-margin_days = 40 # 40 días de margen para los indicadores tecnicos
-wanted_previous_dates = 730 # 2 años
+margin_days = 0 # 40 días de margen para los indicadores tecnicos
+wanted_previous_dates = 0 # 2 años
 start_time = int((fecha_especifica - timedelta(days=(margin_days + wanted_previous_dates + 1))).timestamp() * 1000)
 end_time = int((fecha_especifica + timedelta(days=(1))).timestamp() * 1000)
 
@@ -247,8 +250,8 @@ end_time = int((fecha_especifica + timedelta(days=(1))).timestamp() * 1000)
 # print(datos_influentes)
 
 # generar_dataset
-# datos_completo = generar_dataset(interval, start_time, end_time, binance_symbol, symbol, ['BTCUSDT', 'ETHUSDT', 'BNBUSDT'])
-# print(datos_completo)
+datos_completo = generar_dataset(interval, start_time, end_time, binance_symbol, binance_symbol, ['BTCUSDT', 'ETHUSDT', 'BNBUSDT'])
+print(datos_completo)
 
 # calcular_indicadores_tecnicos
 # datos_candlestick = obtener_historico_precio(interval, start_time, end_time, binance_symbol)
@@ -261,9 +264,9 @@ end_time = int((fecha_especifica + timedelta(days=(1))).timestamp() * 1000)
 # print(aggregated_trades)
 
 # Calcular obtener_whale_alerts_binance
-historico_precio = obtener_historico_precio(interval, start_time, end_time, binance_symbol)
-print(historico_precio)
+# historico_precio = obtener_historico_precio(interval, start_time, end_time, binance_symbol)
+# print(historico_precio)
 # print(datetime.utcfromtimestamp(start_time / 1000))
 # print(datetime.utcfromtimestamp(end_time / 1000))
-whale_alerts = obtener_whale_alerts_binance(start_time, end_time, binance_symbol, 1000, historico_precio)
-print(whale_alerts)
+# whale_alerts = obtener_whale_alerts_binance(start_time, end_time, binance_symbol, 1000, historico_precio)
+# print(whale_alerts)
