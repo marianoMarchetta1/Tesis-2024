@@ -1,3 +1,4 @@
+import os
 import time
 import talib;
 from datetime import datetime, timedelta
@@ -24,6 +25,12 @@ def generar_dataset(interval, start_time, end_time, par="BTCUSDT", moneda="BTC",
     sentimiento_moneda = obtener_sentimiento_moneda(moneda)
     sentimiento_individuos = obtener_sentimiento_individuos()
     
+    ### Codigo a testear en conjunto, lo testie aislado y funciona bien, sino algunas fehcas aparecian con hora y duplicadas
+    histórico_precio['Open_time'] = pd.to_datetime(histórico_precio['Open_time']).dt.date
+    histórico_precio_influyentes['Open_time'] = pd.to_datetime(histórico_precio_influyentes['Open_time']).dt.date
+    indicadores_tecnicos['Open_time'] = pd.to_datetime(indicadores_tecnicos['Open_time']).dt.date
+    whale_alerts_binance['Open_time'] = pd.to_datetime(whale_alerts_binance['Open_time']).dt.date
+    #####
     
     dataset = pd.merge(histórico_precio, histórico_precio_influyentes, on='Open_time', how='outer')
     dataset = pd.merge(dataset, indicadores_tecnicos, on='Open_time', how='outer')
@@ -236,8 +243,8 @@ interval = '1d'  # Obtener datos diarios
 # porque algunos indicadores tecnicos necesitan hasta 33 dias previos para ser calculados,
 # sino me sucede que los primeros dias de la serie tienen ciertos indicadores en NaN.
 # A su vez, le agrego un dia mas a la resta por el formato UTC de la API de binance
-margin_days = 0 # 40 días de margen para los indicadores tecnicos
-wanted_previous_dates = 0 # 2 años
+margin_days = 40 # 40 días de margen para los indicadores tecnicos
+wanted_previous_dates = 730 # 2 años
 start_time = int((fecha_especifica - timedelta(days=(margin_days + wanted_previous_dates + 1))).timestamp() * 1000)
 end_time = int((fecha_especifica + timedelta(days=(1))).timestamp() * 1000)
 
@@ -250,8 +257,8 @@ end_time = int((fecha_especifica + timedelta(days=(1))).timestamp() * 1000)
 # print(datos_influentes)
 
 # generar_dataset
-datos_completo = generar_dataset(interval, start_time, end_time, binance_symbol, binance_symbol, ['BTCUSDT', 'ETHUSDT', 'BNBUSDT'])
-print(datos_completo)
+# datos_completo = generar_dataset(interval, start_time, end_time, binance_symbol, binance_symbol, ['BTCUSDT', 'ETHUSDT', 'BNBUSDT'])
+# print(datos_completo)
 
 # calcular_indicadores_tecnicos
 # datos_candlestick = obtener_historico_precio(interval, start_time, end_time, binance_symbol)
@@ -270,3 +277,24 @@ print(datos_completo)
 # print(datetime.utcfromtimestamp(end_time / 1000))
 # whale_alerts = obtener_whale_alerts_binance(start_time, end_time, binance_symbol, 1000, historico_precio)
 # print(whale_alerts)
+
+
+######## Codigo para testear los merge de los datasets aisladamente ################################
+histórico_precio = pd.read_csv("/Users/mmarchetta/Desktop/Tesis-2024/histórico_precio.csv")
+histórico_precio_influyentes = pd.read_csv("/Users/mmarchetta/Desktop/Tesis-2024/histórico_precio_influyentes.csv")
+indicadores_tecnicos = pd.read_csv("/Users/mmarchetta/Desktop/Tesis-2024/indicadores_tecnicos.csv")
+whale_alerts_binance = pd.read_csv("/Users/mmarchetta/Desktop/Tesis-2024/whale_alerts_binance.csv")
+
+histórico_precio['Open_time'] = pd.to_datetime(histórico_precio['Open_time']).dt.date
+histórico_precio_influyentes['Open_time'] = pd.to_datetime(histórico_precio_influyentes['Open_time']).dt.date
+indicadores_tecnicos['Open_time'] = pd.to_datetime(indicadores_tecnicos['Open_time']).dt.date
+whale_alerts_binance['Open_time'] = pd.to_datetime(whale_alerts_binance['Open_time']).dt.date
+
+dataset = pd.merge(histórico_precio, histórico_precio_influyentes, on='Open_time', how='outer')
+dataset = pd.merge(dataset, indicadores_tecnicos, on='Open_time', how='outer')
+dataset = pd.merge(dataset, whale_alerts_binance, on='Open_time', how='outer')
+    
+dataset = dataset[39:] # Elimino los primeros 39 días para evitar valores NaN en los indicadores técnicos
+
+guardar_dataset_en_csv(dataset, "dataset.csv")
+########################################################
