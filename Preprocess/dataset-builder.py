@@ -42,13 +42,13 @@ def generar_dataset(interval, start_time, end_time, par="BTCUSDT", monedas_lider
     #Esta funcion directametne actualiza el archivo dataset.csv
     obtener_sentimiento_general("dataset.csv")
     obtener_sentimiento_moneda(par, "dataset.csv")
-
-    sentimiento_individuos = obtener_sentimiento_individuos()
+    obtener_sentimiento_individuos("dataset.csv")
 
     return dataset
 
 # Lógica para obtener el sentimiento específico de la moneda
 # TODO: Refactorear esta funcion y la otra de sentimiento para remover codigo duplicado.
+# Con 10 paginas tarda arpxo 15hs (va a depender de la cantida de paginas que encuentre por dia)
 def obtener_sentimiento_moneda(par, ruta_dataset):
     coin_related_terms = get_coin_related_terms(par)
     
@@ -76,7 +76,7 @@ def obtener_sentimiento_moneda(par, ruta_dataset):
         
         print(f"Procesando fecha desde: {fecha_desde}, fecha hasta: {fecha_hasta}")
         
-        palabras_clave = " ".join(coin_related_terms)
+        palabras_clave = " OR ".join(coin_related_terms)
 
         params = {
             'variables': json.dumps({
@@ -147,7 +147,10 @@ def obtener_sentimiento_moneda(par, ruta_dataset):
                 break
 
         # Determino el sentimiento general y guardo variables utilies en el dataset.
-        overall_sentiment = get_overall_sentyment(total_compound_score, tweets_utilizados)
+        if tweets_utilizados > 0:
+            overall_sentiment = get_overall_sentyment(total_compound_score, tweets_utilizados)
+        else:
+            overall_sentiment = 'neu'
 
         dataset.at[index, 'Sentimiento_coin'] = overall_sentiment
         dataset.at[index, 'Cantidad_post_coin'] = sentiments['pos']
@@ -161,10 +164,118 @@ def obtener_sentimiento_moneda(par, ruta_dataset):
 
 ###################################################################################################
 
-def obtener_sentimiento_individuos():
-    # Lógica para obtener el sentimiento de individuos influyentes
-    # Retorna un diccionario {fecha: sentimiento}
-    return
+# Lógica para obtener el sentimiento de individuos influyentes
+def obtener_sentimiento_individuos(ruta_dataset):
+    if not os.path.isfile(ruta_dataset):
+        raise FileNotFoundError(f"El archivo {ruta_dataset} no existe.")
+
+    dataset = pd.read_csv(ruta_dataset)
+
+    if 'Sentimiento_referentes' not in dataset.columns:
+        dataset['Sentimiento_referentes'] = ''
+        
+    if 'Tweets_Utilizados_referentes' not in dataset.columns:
+        dataset['Tweets_Utilizados_referentes'] = 0
+
+    headers = TWT_HEADERS
+    palabras_clave = "bitcoin OR btc OR cryptocurrency OR crypto OR CryptoNews"
+
+    for index, row in dataset.iterrows():
+
+        if row['Sentimiento_referentes'] == 'pos' or row['Sentimiento_referentes'] == 'neg' or row['Sentimiento_referentes'] == 'neu':
+            continue
+
+        fecha_desde = pd.to_datetime(row['Open_time'])
+
+        fecha_hasta = fecha_desde + timedelta(days=1)
+        
+        print(f"Procesando fecha desde: {fecha_desde}, fecha hasta: {fecha_hasta}")
+
+        params = {
+            'variables': json.dumps({
+                'rawQuery': f'({palabras_clave}) (from:elonmusk OR from:jack OR from:VitalikButerin OR from:cz_binance OR from:aantonop OR from:brian_armstrong) until:{fecha_hasta.strftime("%Y-%m-%d")} since:{fecha_desde.strftime("%Y-%m-%d")}',
+                'max_results': 100,
+                'count': 100,
+                'querySource': 'typed_query',
+                'product': 'Latest',
+                'min_faves': 250
+            }),
+            'features': TWT_FEATURES,
+        }
+        
+        tweets_utilizados = 0
+        total_compound_score = 0
+
+        sentiments = {'pos': 0, 'neg': 0, 'neu': 0}
+        
+        for page in range(10):  # Obtener un máximo de tres páginas
+            response = requests.get('https://twitter.com/i/api/graphql/ummoVKaeoT01eUyXutiSVQ/SearchTimeline', headers=headers, params=params)
+            has_sleept, errored = process_response(response)
+            
+            if has_sleept:
+                response = requests.get('https://twitter.com/i/api/graphql/ummoVKaeoT01eUyXutiSVQ/SearchTimeline', headers=headers, params=params)
+            elif errored:
+                continue
+            
+            response_json = response.json()
+            tweets = response_json['data']['search_by_raw_query']['search_timeline']['timeline']['instructions'][0]
+            
+            if 'entries' in tweets:
+                tweets = tweets['entries']
+            else:
+                tweets = []
+
+            print(f"Tweets para la pagina {page}, total: {len(tweets)}")
+            
+            if len(tweets) == 0:
+                break
+
+            for tweet in tweets:
+                tweet_text = get_tweet_text(tweet)
+
+                if not len(tweet_text) > 0:
+                    continue
+                
+                sentiment_scores = translate_and_get_sentyment(tweet_text)
+                
+                # Solo con propositos informativos
+                max_tweet_sentyment = get_tweet_max_sentyment(sentiment_scores)
+                total_compound_score += sentiment_scores['compound']
+                sentiments[max_tweet_sentyment] += 1
+                tweets_utilizados += 1
+            
+            cursor = get_next_page_token(response_json)
+
+            if not len(cursor) == 0:
+                params['variables'] = json.dumps({
+                    'rawQuery': f'({palabras_clave}) (from:elonmusk OR from:jack OR from:VitalikButerin OR from:cz_binance OR from:aantonop OR from:brian_armstrong) until:{fecha_hasta.strftime("%Y-%m-%d")} since:{fecha_desde.strftime("%Y-%m-%d")}',
+                    'max_results': 100,
+                    'count': 100,
+                    'querySource': 'typed_query',
+                    'product': 'Latest',
+                    'min_faves': 100,
+                    'cursor': cursor
+                })
+            else:
+                break
+
+        # Determino el sentimiento general y guardo variables utilies en el dataset.
+        overall_sentiment = ''
+        
+        if tweets_utilizados > 0:
+            overall_sentiment = get_overall_sentyment(total_compound_score, tweets_utilizados)
+        else:
+            overall_sentiment = 'neu'
+
+        dataset.at[index, 'Sentimiento_referentes'] = overall_sentiment
+        dataset.at[index, 'Cantidad_post_referentes'] = sentiments['pos']
+        dataset.at[index, 'Cantidad_neg_referentes'] = sentiments['neg']
+        dataset.at[index, 'Cantidad_neu_referentes'] = sentiments['neu']
+        dataset.at[index, 'Tweets_Utilizados_referentes'] = tweets_utilizados
+        dataset.at[index, 'Compound total referentes'] = total_compound_score
+        dataset.to_csv(ruta_dataset, index=False, float_format='%.8f')
+    
+    return dataset
 
 ###################################################################################################
 
@@ -172,6 +283,7 @@ def obtener_sentimiento_individuos():
 # Lo que hago es copiar el dataset.csv a mano, renombrarlo y ejecutar la funcion sobre ese archivo,
 # con el codigo que esta en los ejemplos de abajo.
 ## Con 5 paginas tarda aprox 19hs
+## Con 10 paginas tarda aprox 37hs
 def obtener_sentimiento_general(ruta_dataset):
 
     if not os.path.isfile(ruta_dataset):
@@ -198,7 +310,7 @@ def obtener_sentimiento_general(ruta_dataset):
         
         print(f"Procesando fecha desde: {fecha_desde}, fecha hasta: {fecha_hasta}")
         
-        palabras_clave = "bitcoin cryptocurrency crypto CryptoNews"
+        palabras_clave = "bitcoin OR cryptocurrency OR crypto OR CryptoNews"
         params = {
             'variables': json.dumps({
                 'rawQuery': f'({palabras_clave}) until:{fecha_hasta.strftime("%Y-%m-%d")} since:{fecha_desde.strftime("%Y-%m-%d")}',
@@ -269,7 +381,10 @@ def obtener_sentimiento_general(ruta_dataset):
                 break
 
         # Determino el sentimiento general y guardo variables utilies en el dataset.
-        overall_sentiment = get_overall_sentyment(total_compound_score, tweets_utilizados)
+        if tweets_utilizados > 0:
+            overall_sentiment = get_overall_sentyment(total_compound_score, tweets_utilizados)
+        else:
+            overall_sentiment = 'neu'
 
         dataset.at[index, 'Sentimiento'] = overall_sentiment
         dataset.at[index, 'Cantidad_post'] = sentiments['pos']
@@ -528,7 +643,10 @@ end_time = int((fecha_especifica + timedelta(days=(1))).timestamp() * 1000)
 
 
 # Calcular sentimiento general del mercado
-sentimiento_general = obtener_sentimiento_general("/Users/mmarchetta/Desktop/Tesis-2024/dataset_sentimiento_general_10_paginas.csv")
+# sentimiento_general = obtener_sentimiento_general("/Users/mmarchetta/Desktop/Tesis-2024/dataset_sentimiento_general_10_paginas.csv")
 
 # Calcular sentimiento particular de la moneda
 # sentimiento_moneda = obtener_sentimiento_moneda(binance_symbol, "/Users/mmarchetta/Desktop/Tesis-2024/dataset_sentimiento_moneda_10_paginas.csv")
+
+# Calcular sentimiento de referentes de la industria
+sentimiento_referentes = obtener_sentimiento_individuos("/Users/mmarchetta/Desktop/Tesis-2024/dataset_sentimiento_referentes_10_paginas.csv")
