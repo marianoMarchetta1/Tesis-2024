@@ -73,6 +73,11 @@ def translate_and_get_sentyment(tweet_text):
     analyzer = SentimentIntensityAnalyzer()
 
     translated_tweet = GoogleTranslator(source='auto', target='en').translate(tweet_text)
+    
+    #Algunos tweets solamente contienen emoji (como consecuence de un repost), estos no tiene traducción
+    if translated_tweet is None:
+        return {'compound': 0.0}
+    
     # print(f"Tweet: {translated_tweet}")
     sentiment_scores = analyzer.polarity_scores(translated_tweet)
     # print(sentiment_scores.items())
