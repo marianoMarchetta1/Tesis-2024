@@ -188,6 +188,99 @@ def obtener_sentimiento_individuos(ruta_dataset):
 
 ###################################################################################################
 
+# Lógica para obtener el sentimiento de individuos influyentes
+def obtener_whale_alerts_twitter(ruta_dataset):
+    if not os.path.isfile(ruta_dataset):
+        raise FileNotFoundError(f"El archivo {ruta_dataset} no existe.")
+
+    dataset = pd.read_csv(ruta_dataset)
+
+    tweets_utilizados_column = 'Tweets_Utilizados_whale_alert'
+
+    if tweets_utilizados_column not in dataset.columns:
+        dataset[tweets_utilizados_column] = 0
+        
+    headers = TWT_HEADERS
+
+    for index, row in dataset.iterrows():
+        
+        if row[tweets_utilizados_column] > 0:
+            continue
+
+        fecha_desde = pd.to_datetime(row['Open_time'])
+        fecha_hasta = fecha_desde + timedelta(days=1)
+
+        print(f"Procesando fecha desde: {fecha_desde}, fecha hasta: {fecha_hasta}")
+
+        params = {
+            'variables': json.dumps({
+                'rawQuery': f'(from:whale_alert) until:{fecha_hasta.strftime("%Y-%m-%d")} since:{fecha_desde.strftime("%Y-%m-%d")}',
+                'max_results': 100,
+                'count': 100,
+                'querySource': 'typed_query',
+                'product': 'Latest',
+                'min_faves': 250
+            }),
+            'features': TWT_FEATURES,
+        }
+
+        tweets_utilizados = 0
+
+        for page in range(20):  # Obtener un máximo de veinte páginas
+            response = requests.get('https://twitter.com/i/api/graphql/ummoVKaeoT01eUyXutiSVQ/SearchTimeline',
+                                    headers=headers, params=params)
+            has_sleept, errored = process_response(response)
+
+            if has_sleept:
+                response = requests.get('https://twitter.com/i/api/graphql/ummoVKaeoT01eUyXutiSVQ/SearchTimeline',
+                                        headers=headers, params=params)
+            elif errored:
+                continue
+
+            response_json = response.json()
+            tweets = response_json['data']['search_by_raw_query']['search_timeline']['timeline']['instructions'][0]
+
+            if 'entries' in tweets:
+                tweets = tweets['entries']
+            else:
+                tweets = []
+
+            print(f"Tweets para la pagina {page}, total: {len(tweets)}")
+
+            if len(tweets) == 0:
+                break
+
+            for tweet in tweets:
+                tweet_text = get_tweet_text(tweet)
+
+                if not len(tweet_text) > 0:
+                    continue
+                else:
+                    # print(tweet_text)
+                    tweets_utilizados += 1
+
+            cursor = get_next_page_token(response_json)
+
+            if not len(cursor) == 0:
+                params['variables'] = json.dumps({
+                    'rawQuery': f'(from:whale_alert) until:{fecha_hasta.strftime("%Y-%m-%d")} since:{fecha_desde.strftime("%Y-%m-%d")}',
+                    'max_results': 100,
+                    'count': 100,
+                    'querySource': 'typed_query',
+                    'product': 'Latest',
+                    'min_faves': 100,
+                    'cursor': cursor
+                })
+            else:
+                break
+
+        # Guardo la cantidad de tweets utilizados en el dataset
+        dataset.at[index, tweets_utilizados_column] = tweets_utilizados
+        dataset.to_csv(ruta_dataset, index=False, float_format='%.8f')
+
+    return dataset
+###################################################################################################
+
 # Al ejecutar esta funcion sera necesario obtener un nuevo curl de la web y actualizar los headers.
 # Lo que hago es copiar el dataset.csv a mano, renombrarlo y ejecutar la funcion sobre ese archivo,
 # con el codigo que esta en los ejemplos de abajo.
@@ -450,4 +543,7 @@ end_time = int((fecha_especifica + timedelta(days=(1))).timestamp() * 1000)
 # sentimiento_moneda = obtener_sentimiento_moneda(binance_symbol, "/Users/mmarchetta/Desktop/Tesis-2024/dataset_sentimiento_moneda_10_paginas.csv")
 
 # Calcular sentimiento de referentes de la industria
-sentimiento_referentes = obtener_sentimiento_individuos("/Users/mmarchetta/Desktop/Tesis-2024/dataset_sentimiento_referentes_10_paginas.csv")
+# sentimiento_referentes = obtener_sentimiento_individuos("/Users/mmarchetta/Desktop/Tesis-2024/dataset_sentimiento_referentes_10_paginas.csv")
+
+# Calcular obtener_whale_alerts_twitter
+obtener_whale_alerts_twitter("/Users/mmarchetta/Desktop/Tesis-2024/dataset_whale_alerts_twt_10_paginas.csv")
