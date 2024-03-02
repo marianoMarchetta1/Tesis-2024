@@ -518,7 +518,7 @@ def obtener_whale_alerts_coinbase(start_date, end_date, moneda, umbral, precio_h
 
 # Lógica para guardar el dataset en un archivo CSV usando pandas
 def guardar_dataset_en_csv(dataset, name="dataset.csv"):
-    pd.DataFrame(dataset).to_csv(name, index=False)
+    pd.DataFrame(dataset).to_csv(name, index=False, float_format='%.8f')
     return
 
 ###################################################################################################
@@ -632,7 +632,11 @@ end_date = fecha_especifica + timedelta(days=1)
 # obtener_whale_alerts_twitter("/Users/mmarchetta/Desktop/Tesis-2024/dataset_whale_alerts_twt_10_paginas.csv")
 
 # Calcular grandes transacciones de coinbase
-historico_precio = obtener_historico_precio(interval, start_time, end_time, binance_symbol)
-whale_alerts_coinbase = obtener_whale_alerts_coinbase(start_date, end_date, coinbase_symbol, 1000, historico_precio)
-whale_alerts_coinbase['Open_time'] = pd.to_datetime(whale_alerts_coinbase['Open_time']).dt.date
-guardar_dataset_en_csv(whale_alerts_coinbase, name="whale_alerts_coinbase.csv")
+# historico_precio = obtener_historico_precio(interval, start_time, end_time, binance_symbol)
+# whale_alerts_coinbase = obtener_whale_alerts_coinbase(start_date, end_date, coinbase_symbol, 1000, historico_precio)
+# whale_alerts_coinbase['Open_time'] = pd.to_datetime(whale_alerts_coinbase['Open_time']).dt.date
+# guardar_dataset_en_csv(whale_alerts_coinbase, name="whale_alerts_coinbase.csv")
+# dataset = pd.read_csv('/Users/mmarchetta/Desktop/Tesis-2024/final_dataset.csv')
+# whale_alerts_coinbase = pd.read_csv('/Users/mmarchetta/Desktop/Tesis-2024/whale_alerts_coinbase.csv')
+# dataset = pd.merge(dataset, whale_alerts_coinbase, on='Open_time', how='outer')
+# guardar_dataset_en_csv(dataset, 'final_dataset.csv')
