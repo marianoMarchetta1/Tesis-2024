@@ -564,7 +564,7 @@ wanted_previous_dates = 730 # 2 años
 start_time = int((fecha_especifica - timedelta(days=(margin_days + wanted_previous_dates + 1))).timestamp() * 1000)
 end_time = int((fecha_especifica + timedelta(days=(1))).timestamp() * 1000)
 
-start_date = fecha_especifica - timedelta(days=(margin_days + wanted_previous_dates))
+start_date = fecha_especifica - timedelta(days=(wanted_previous_dates))
 end_date = fecha_especifica + timedelta(days=1)
 
 # obtener_historico_precio
