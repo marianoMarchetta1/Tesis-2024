@@ -1,16 +1,15 @@
 import os
-from helpers import TWT_FEATURES, TWT_HEADERS, get_coin_related_terms, get_next_page_token, get_overall_sentyment, get_tweet_max_sentyment, get_tweet_text, process_response, translate_and_get_sentyment
+import time
+from helpers import TWT_FEATURES, TWT_HEADERS, build_jwt_token, get_coin_related_terms, get_next_page_token, get_overall_sentyment, get_tweet_max_sentyment, get_tweet_text, parse_datetime_string, process_response, translate_and_get_sentyment
 import talib;
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import requests
 import pandas as pd;
 import numpy as np;
-import pytz
 import json
 
-
 #Obtengo toda la data cruda. Sera responsabilidad de otra funcion realizar las normalizaciones y limpiezas necesarias
-def generar_dataset(interval, start_time, end_time, par="BTCUSDT", monedas_lideres=['BTCUSDT', 'ETHUSDT', 'BNBUSDT']):
+def generar_dataset(interval, start_time, end_time, start_date, end_date, coinbase_symbol="BTC-USDT", par="BTCUSDT", monedas_lideres=['BTCUSDT', 'ETHUSDT', 'BNBUSDT']):
     histórico_precio = obtener_historico_precio(interval, start_time, end_time, par)
     guardar_dataset_en_csv(histórico_precio, name="histórico_precio.csv")
 
@@ -23,17 +22,21 @@ def generar_dataset(interval, start_time, end_time, par="BTCUSDT", monedas_lider
     whale_alerts_binance = obtener_whale_alerts_binance(start_time, end_time, par, 1000, histórico_precio)
     guardar_dataset_en_csv(whale_alerts_binance, name="whale_alerts_binance.csv")
 
+    whale_alerts_coinbase = obtener_whale_alerts_coinbase(start_date, end_date, coinbase_symbol, 1000, histórico_precio)
+    guardar_dataset_en_csv(whale_alerts_coinbase, name="whale_alerts_coinbase.csv")
     
     ### Codigo a testear en conjunto, lo testie aislado y funciona bien, sino algunas fehcas aparecian con hora y duplicadas
     histórico_precio['Open_time'] = pd.to_datetime(histórico_precio['Open_time']).dt.date
     histórico_precio_influyentes['Open_time'] = pd.to_datetime(histórico_precio_influyentes['Open_time']).dt.date
     indicadores_tecnicos['Open_time'] = pd.to_datetime(indicadores_tecnicos['Open_time']).dt.date
     whale_alerts_binance['Open_time'] = pd.to_datetime(whale_alerts_binance['Open_time']).dt.date
+    whale_alerts_coinbase['Open_time'] = pd.to_datetime(whale_alerts_coinbase['Open_time']).dt.date
     #####
     
     dataset = pd.merge(histórico_precio, histórico_precio_influyentes, on='Open_time', how='outer')
     dataset = pd.merge(dataset, indicadores_tecnicos, on='Open_time', how='outer')
     dataset = pd.merge(dataset, whale_alerts_binance, on='Open_time', how='outer')
+    dataset = pd.merge(dataset, whale_alerts_coinbase, on='Open_time', how='outer')
     
     dataset = dataset[39:] # Elimino los primeros 39 días para evitar valores NaN en los indicadores técnicos
 
@@ -437,6 +440,82 @@ def obtener_whale_alerts_binance(start_time, end_time, moneda, umbral, precio_hi
 
 ###################################################################################################
 
+def obtener_aggregate_trades_coinbase(symbol, start_date, end_date):
+    trades = []
+    after_trade_time = None
+    start_date = start_date.replace(tzinfo=timezone.utc)
+    end_date = end_date.replace(tzinfo=timezone.utc)
+    
+    # print(start_date)
+    # print(end_date)
+
+    while True:
+        request_path = f"/api/v3/brokerage/products/{symbol}/ticker"
+        jwt_token = build_jwt_token(request_path)
+        url = f"https://api.coinbase.com{request_path}"
+
+        headers = {
+            "Authorization": f"Bearer {jwt_token}",
+        }
+
+        params = {"limit": 1000, "start": int(start_date.timestamp()), "end": int(end_date.timestamp())}
+
+        if after_trade_time:
+            params["end"] = int(after_trade_time.timestamp())
+
+        response = requests.get(url, params=params, headers=headers)
+
+        if response.status_code == 200:
+            trades_data = response.json()
+            # print(trades_data)
+            if not trades_data or not trades_data['trades'] or len(trades_data['trades']) == 0:
+                break
+            
+            trades.extend(trades_data['trades'])
+            end_time_of_first_last_str = trades_data['trades'][-1]['time']
+            end_time_of_last_trade = parse_datetime_string(end_time_of_first_last_str)
+            after_trade_time = end_time_of_last_trade
+
+            print(f"Siguiente limite a consultar: {after_trade_time}")
+            # print(trades_data['trades'][-1]['trade_id'])
+
+            if end_time_of_last_trade <= start_date:
+                break
+        elif response.status_code == 429: 
+            print("Se ha alcanzado el límite de solicitudes. Esperando 10 segundos...")
+            time.sleep(10)
+        else:
+            print("Error en la solicitud:", response.status_code)
+
+    return trades
+
+
+# Umbral equivale a cantidad de monedas
+def obtener_whale_alerts_coinbase(start_date, end_date, moneda, umbral, precio_historico):
+    fecha = start_date
+    resultado = pd.DataFrame(columns=["Open_time", "buy_1000x_high_coinbase", "sell_1000x_high_coinbase", "total_trades_coinbase"])
+
+    while fecha < end_date:
+        trades = obtener_aggregate_trades_coinbase(moneda, fecha, fecha + timedelta(days=1))
+        if trades and len(trades) > 0:
+            precio_historico_filtered = precio_historico[precio_historico['Open_time'] == fecha]
+            high_value = float(precio_historico_filtered['High'].max())
+            
+            print(f"Fecha sobre la que voy a calcular los whales: {fecha}, mayor precio para ese dia: {high_value}, umbral: {high_value * umbral}, total trades: {len(trades)}")
+            
+            buy_1000x_high_coinbase = sum(1 for trade in trades if trade['side'] == 'BUY' and float(trade['price']) * float(trade['size']) > high_value * umbral)
+            sell_1000x_high_coinbase = sum(1 for trade in trades if trade['side'] == 'SELL' and float(trade['price']) * float(trade['size']) > high_value * umbral)
+
+            resultado.loc[len(resultado)] = [pd.to_datetime(fecha), buy_1000x_high_coinbase, sell_1000x_high_coinbase, len(trades)]
+            # print(trades)
+            # print(resultado)
+
+        fecha += timedelta(days=1)
+
+    return resultado
+
+###################################################################################################
+
 # Lógica para guardar el dataset en un archivo CSV usando pandas
 def guardar_dataset_en_csv(dataset, name="dataset.csv"):
     pd.DataFrame(dataset).to_csv(name, index=False)
@@ -473,6 +552,7 @@ fecha_especifica = datetime(2024, 2, 14)
 
 
 binance_symbol = 'DOTUSDT'
+coinbase_symbol = 'DOT-USD'
 interval = '1d'  # Obtener datos diarios
 # Retroceder 2 años desde la fecha específica y convertir a milisegundos
 # A mi me interesa tomar 730 dias (2 años), a eso le agrego 40 dias mas,
@@ -484,6 +564,9 @@ wanted_previous_dates = 730 # 2 años
 start_time = int((fecha_especifica - timedelta(days=(margin_days + wanted_previous_dates + 1))).timestamp() * 1000)
 end_time = int((fecha_especifica + timedelta(days=(1))).timestamp() * 1000)
 
+start_date = fecha_especifica - timedelta(days=(margin_days + wanted_previous_dates))
+end_date = fecha_especifica + timedelta(days=1)
+
 # obtener_historico_precio
 # datos_candlestick = obtener_historico_precio(interval, start_time, end_time, binance_symbol)
 # print(datos_candlestick)
@@ -493,7 +576,7 @@ end_time = int((fecha_especifica + timedelta(days=(1))).timestamp() * 1000)
 # print(datos_influentes)
 
 # generar_dataset
-# datos_completo = generar_dataset(interval, start_time, end_time, binance_symbol, ['BTCUSDT', 'ETHUSDT', 'BNBUSDT'])
+# datos_completo = generar_dataset(interval, start_time, end_time, start_date, end_date, coinbase_symbol, binance_symbol, ['BTCUSDT', 'ETHUSDT', 'BNBUSDT'])
 # print(datos_completo)
 
 # calcular_indicadores_tecnicos
@@ -546,4 +629,10 @@ end_time = int((fecha_especifica + timedelta(days=(1))).timestamp() * 1000)
 # sentimiento_referentes = obtener_sentimiento_individuos("/Users/mmarchetta/Desktop/Tesis-2024/dataset_sentimiento_referentes_10_paginas.csv")
 
 # Calcular obtener_whale_alerts_twitter
-obtener_whale_alerts_twitter("/Users/mmarchetta/Desktop/Tesis-2024/dataset_whale_alerts_twt_10_paginas.csv")
+# obtener_whale_alerts_twitter("/Users/mmarchetta/Desktop/Tesis-2024/dataset_whale_alerts_twt_10_paginas.csv")
+
+# Calcular grandes transacciones de coinbase
+historico_precio = obtener_historico_precio(interval, start_time, end_time, binance_symbol)
+whale_alerts_coinbase = obtener_whale_alerts_coinbase(start_date, end_date, coinbase_symbol, 1000, historico_precio)
+whale_alerts_coinbase['Open_time'] = pd.to_datetime(whale_alerts_coinbase['Open_time']).dt.date
+guardar_dataset_en_csv(whale_alerts_coinbase, name="whale_alerts_coinbase.csv")

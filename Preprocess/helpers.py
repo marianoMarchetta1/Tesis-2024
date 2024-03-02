@@ -1,4 +1,3 @@
-import datetime
 import json
 import logging
 import time
@@ -8,7 +7,9 @@ import nltk
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 nltk.download('vader_lexicon')
 import requests
-# from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+from coinbase import jwt_generator
+from private_secrets import COINBASE_APY_KEY, COINBASE_APY_SECRET
+from datetime import datetime, timezone
 
 TWT_HEADERS = {
     'authority': 'twitter.com',
@@ -175,3 +176,23 @@ def get_coin_related_terms(par):
     related_terms = [coin_raled_terms["name"], coin_raled_terms["symbol"], coin_raled_terms["id"], coin_raled_terms["web_slug"], f"#{coin_raled_terms['symbol']}", f"#{coin_raled_terms['name']}", f"#{coin_raled_terms['id']}"]
     
     return related_terms
+
+def build_jwt_token(request_path):
+    api_key = COINBASE_APY_KEY
+    api_secret = COINBASE_APY_SECRET
+
+    request_method = "GET"
+    jwt_uri = jwt_generator.format_jwt_uri(request_method, request_path)
+    jwt_token = jwt_generator.build_rest_jwt(jwt_uri, api_key, api_secret)
+    
+    return jwt_token
+
+
+def parse_datetime_string(datetime_str):
+    formats = ["%Y-%m-%dT%H:%M:%S.%fZ", "%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%d %H:%M:%S.%fZ", "%Y-%m-%d %H:%M:%SZ"]
+    for fmt in formats:
+        try:
+            return datetime.strptime(datetime_str, fmt).replace(tzinfo=timezone.utc)
+        except ValueError:
+            continue
+    raise ValueError("No se pudo analizar la cadena de fecha y hora")
