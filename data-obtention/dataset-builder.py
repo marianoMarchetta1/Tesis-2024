@@ -46,6 +46,7 @@ def generar_dataset(interval, start_time, end_time, start_date, end_date, coinba
     obtener_sentimiento_general("dataset.csv")
     obtener_sentimiento_moneda(par, "dataset.csv")
     obtener_sentimiento_individuos("dataset.csv")
+    obtener_whale_alerts_twitter("dataset.csv")
 
     return dataset
 
@@ -630,6 +631,10 @@ end_date = fecha_especifica + timedelta(days=1)
 
 # Calcular obtener_whale_alerts_twitter
 # obtener_whale_alerts_twitter("/Users/mmarchetta/Desktop/Tesis-2024/dataset_whale_alerts_twt_10_paginas.csv")
+# dataset = pd.read_csv('/Users/mmarchetta/Desktop/Tesis-2024/final_dataset.csv')
+# whale_alerts_binance = pd.read_csv('/Users/mmarchetta/Desktop/Tesis-2024/dataset_whale_alerts_twt_10_paginas.csv', usecols=['Open_time', 'Tweets_Utilizados_whale_alert'])
+# dataset = pd.merge(dataset, whale_alerts_binance, on='Open_time', how='outer')
+# dataset.to_csv('final_dataset.csv', index=False, float_format='%.8f')
 
 # Calcular grandes transacciones de coinbase
 # historico_precio = obtener_historico_precio(interval, start_time, end_time, binance_symbol)
