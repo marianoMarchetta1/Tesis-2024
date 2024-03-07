@@ -329,6 +329,7 @@ def calcular_indicadores_tecnicos(historico_precio):
     close_prices = np.array(historico_precio['Close'], dtype=np.double)
     high_prices = np.array(historico_precio['High'], dtype=np.double)
     low_prices = np.array(historico_precio['Low'], dtype=np.double)
+    volume = np.array(historico_precio['Volume'], dtype=np.double)
     
     # Media Móvil Simple (SMA)
     sma_20 = talib.SMA(close_prices, timeperiod=20)
@@ -353,6 +354,12 @@ def calcular_indicadores_tecnicos(historico_precio):
     
     # Índice de Canal de Materias Primas 
     cci = talib.CCI(high_prices, low_prices, close_prices, timeperiod=14)
+    
+    # ATR (Average True Range)
+    atr = talib.ATR(high_prices, low_prices, close_prices, timeperiod=14)
+    
+    # Índice de Flujo de Dinero (MFI - Money Flow Index)
+    mfi = talib.MFI(high_prices, low_prices, close_prices, volume, timeperiod=14)
 
     
     # Crear un DataFrame para almacenar los indicadores técnicos
@@ -369,7 +376,9 @@ def calcular_indicadores_tecnicos(historico_precio):
         'ADX': adx,
         'SlowK': slowk,
         'SlowD': slowd,
-        'CCI': cci
+        'CCI': cci,
+        'ATR': atr,
+        'MFI': mfi
     }, index=historico_precio.index)
     
     return indicadores
