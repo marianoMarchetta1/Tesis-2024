@@ -116,7 +116,7 @@ def process_response(response):
     # Para los casos de rate limit exceeded
     if response.status_code == 429:
         reset_timestamp = int(response.headers['X-Rate-Limit-Reset'])
-        sleep_time = max(0, reset_timestamp - datetime.datetime.now().timestamp())
+        sleep_time = max(0, reset_timestamp - datetime.now().timestamp())
         print(f"Rate limit exceeded. Waiting for {sleep_time} seconds until reset.")
         time.sleep(sleep_time)
         return True, False

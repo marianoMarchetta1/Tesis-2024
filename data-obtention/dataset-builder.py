@@ -53,7 +53,7 @@ def generar_dataset(interval, start_time, end_time, start_date, end_date, coinba
 
 ###################################################################################################
 # Funcion que encapsula la logica repetida de las otras funciones de sentyment
-def obtener_sentimiento(ruta_dataset, palabras_clave, column_prefix=None, specific_authors=None):
+def obtener_sentimiento(ruta_dataset, palabras_clave, column_prefix=None, specific_authors=None, min_faves=100):
     if not os.path.isfile(ruta_dataset):
         raise FileNotFoundError(f"El archivo {ruta_dataset} no existe.")
 
@@ -91,12 +91,11 @@ def obtener_sentimiento(ruta_dataset, palabras_clave, column_prefix=None, specif
 
         params = {
             'variables': json.dumps({
-                'rawQuery': f'({palabras_clave}){query_authors} until:{fecha_hasta.strftime("%Y-%m-%d")} since:{fecha_desde.strftime("%Y-%m-%d")}',
+                'rawQuery': f'({palabras_clave}){query_authors} until:{fecha_hasta.strftime("%Y-%m-%d")} since:{fecha_desde.strftime("%Y-%m-%d")} min_faves:{min_faves} -filter:replies',
                 'max_results': 100,
                 'count': 100,
                 'querySource': 'typed_query',
-                'product': 'Latest',
-                'min_faves': 250
+                'product': 'Latest'
             }),
             'features': TWT_FEATURES,
         }
@@ -106,7 +105,7 @@ def obtener_sentimiento(ruta_dataset, palabras_clave, column_prefix=None, specif
 
         sentiments = {'pos': 0, 'neg': 0, 'neu': 0}
 
-        for page in range(10):  # Obtener un máximo de tres páginas
+        for page in range(50):
             response = requests.get('https://twitter.com/i/api/graphql/ummoVKaeoT01eUyXutiSVQ/SearchTimeline',
                                     headers=headers, params=params)
             has_sleept, errored = process_response(response)
@@ -148,12 +147,11 @@ def obtener_sentimiento(ruta_dataset, palabras_clave, column_prefix=None, specif
 
             if not len(cursor) == 0:
                 params['variables'] = json.dumps({
-                    'rawQuery': f'({palabras_clave}){query_authors} until:{fecha_hasta.strftime("%Y-%m-%d")} since:{fecha_desde.strftime("%Y-%m-%d")}',
+                    'rawQuery': f'({palabras_clave}){query_authors} until:{fecha_hasta.strftime("%Y-%m-%d")} since:{fecha_desde.strftime("%Y-%m-%d")} min_faves:{min_faves} -filter:replies',
                     'max_results': 100,
                     'count': 100,
                     'querySource': 'typed_query',
                     'product': 'Latest',
-                    'min_faves': 100,
                     'cursor': cursor
                 })
             else:
@@ -180,7 +178,7 @@ def obtener_sentimiento(ruta_dataset, palabras_clave, column_prefix=None, specif
 def obtener_sentimiento_moneda(par, ruta_dataset):
     coin_related_terms = get_coin_related_terms(par)
     palabras_clave = " OR ".join(coin_related_terms)
-    return obtener_sentimiento(ruta_dataset, palabras_clave, "coin")
+    return obtener_sentimiento(ruta_dataset, palabras_clave, "coin", min_faves=50)
 
 ###################################################################################################
 
@@ -292,7 +290,8 @@ def obtener_whale_alerts_twitter(ruta_dataset):
 ## Con 10 paginas tarda aprox 37hs
 def obtener_sentimiento_general(ruta_dataset):
     palabras_clave = "bitcoin OR cryptocurrency OR crypto OR CryptoNews"
-    return obtener_sentimiento(ruta_dataset, palabras_clave, "")
+    #TODO: Tunear el min_faves
+    return obtener_sentimiento(ruta_dataset, palabras_clave, "", min_faves=10000)
 
 ###################################################################################################
 
@@ -633,7 +632,7 @@ end_date = fecha_especifica + timedelta(days=1)
 # sentimiento_general = obtener_sentimiento_general("/Users/mmarchetta/Desktop/Tesis-2024/dataset_sentimiento_general_10_paginas.csv")
 
 # Calcular sentimiento particular de la moneda
-# sentimiento_moneda = obtener_sentimiento_moneda(binance_symbol, "/Users/mmarchetta/Desktop/Tesis-2024/dataset_sentimiento_moneda_10_paginas.csv")
+sentimiento_moneda = obtener_sentimiento_moneda(binance_symbol, "/Users/mmarchetta/Desktop/Tesis-2024/dataset_sentimiento_moneda_50_paginas.csv")
 
 # Calcular sentimiento de referentes de la industria
 # sentimiento_referentes = obtener_sentimiento_individuos("/Users/mmarchetta/Desktop/Tesis-2024/dataset_sentimiento_referentes_10_paginas.csv")
