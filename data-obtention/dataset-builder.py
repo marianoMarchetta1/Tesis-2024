@@ -424,7 +424,7 @@ def obtener_aggregate_trades(symbol, startTime, endTime):
 # Umbral equivale a cantidad de monedas
 def obtener_whale_alerts_binance(start_time, end_time, moneda, umbral, precio_historico):
     fecha = start_time
-    resultado = pd.DataFrame(columns=["Open_time", "Buy_1000x_high", "sell_1000x_high"])
+    resultado = pd.DataFrame(columns=["Open_time", "Buy_1000x_high", "sell_1000x_high", "total_trades_binance"])
 
     while fecha < end_time:
         trades = obtener_aggregate_trades(moneda, fecha, fecha + 86400000)
@@ -440,7 +440,7 @@ def obtener_whale_alerts_binance(start_time, end_time, moneda, umbral, precio_hi
             buy_1000x_high = sum(1 for trade in trades if trade['m'] and float(trade['p']) * float(trade['q']) > high_value * umbral)
             sell_1000x_high = sum(1 for trade in trades if not trade['m'] and float(trade['p']) * float(trade['q']) > high_value * umbral)
 
-            resultado.loc[len(resultado)] = [pd.to_datetime(fecha, unit='ms'), buy_1000x_high, sell_1000x_high]
+            resultado.loc[len(resultado)] = [pd.to_datetime(fecha, unit='ms'), buy_1000x_high, sell_1000x_high, len(trades)]
 
         fecha += 86400000# Siguiente día en milisegundos
 
