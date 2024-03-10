@@ -290,8 +290,7 @@ def obtener_whale_alerts_twitter(ruta_dataset):
 ## Con 10 paginas tarda aprox 37hs
 def obtener_sentimiento_general(ruta_dataset):
     palabras_clave = "bitcoin OR cryptocurrency OR crypto OR CryptoNews"
-    #TODO: Tunear el min_faves
-    return obtener_sentimiento(ruta_dataset, palabras_clave, "", min_faves=10000)
+    return obtener_sentimiento(ruta_dataset, palabras_clave, "", min_faves=500)
 
 ###################################################################################################
 
@@ -629,10 +628,10 @@ end_date = fecha_especifica + timedelta(days=1)
 
 
 # Calcular sentimiento general del mercado
-# sentimiento_general = obtener_sentimiento_general("/Users/mmarchetta/Desktop/Tesis-2024/dataset_sentimiento_general_10_paginas.csv")
+# sentimiento_general = obtener_sentimiento_general("/Users/mmarchetta/Desktop/Tesis-2024/dataset_sentimiento_general_50_paginas.csv")
 
 # Calcular sentimiento particular de la moneda
-sentimiento_moneda = obtener_sentimiento_moneda(binance_symbol, "/Users/mmarchetta/Desktop/Tesis-2024/dataset_sentimiento_moneda_50_paginas.csv")
+# sentimiento_moneda = obtener_sentimiento_moneda(binance_symbol, "/Users/mmarchetta/Desktop/Tesis-2024/dataset_sentimiento_moneda_50_paginas.csv")
 
 # Calcular sentimiento de referentes de la industria
 # sentimiento_referentes = obtener_sentimiento_individuos("/Users/mmarchetta/Desktop/Tesis-2024/dataset_sentimiento_referentes_10_paginas.csv")
