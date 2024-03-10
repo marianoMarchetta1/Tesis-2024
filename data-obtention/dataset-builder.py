@@ -652,3 +652,18 @@ end_date = fecha_especifica + timedelta(days=1)
 # whale_alerts_coinbase = pd.read_csv('/Users/mmarchetta/Desktop/Tesis-2024/whale_alerts_coinbase.csv')
 # dataset = pd.merge(dataset, whale_alerts_coinbase, on='Open_time', how='outer')
 # guardar_dataset_en_csv(dataset, 'final_dataset.csv')
+
+# Codigo para pisar ciertas columnas, utilizado luego de corregir las metricas de sentimiento
+# ruta_dataset1 = '/Users/mmarchetta/Desktop/Tesis-2024/dataset_sentimiento_general_50_paginas.csv'
+# ruta_dataset2 = '/Users/mmarchetta/Desktop/Tesis-2024/data-visualization/final_dataset.csv'
+
+# dataset1 = pd.read_csv(ruta_dataset1)
+# dataset2 = pd.read_csv(ruta_dataset2)
+
+# columnas_a_sobrescribir = ['Sentimiento','Tweets_Utilizados','Cantidad_post','Cantidad_neg','Cantidad_neu','Compound total']
+
+# # Sobrescribir las columnas de dataset2 usando dataset1
+# dataset2[columnas_a_sobrescribir] = dataset1[columnas_a_sobrescribir]
+
+# # Guardar el dataset2 sobrescrito en la misma ruta
+# dataset2.to_csv('/Users/mmarchetta/Desktop/Tesis-2024/data-visualization/final_dataset.csv', index=False, float_format='%.8f')
