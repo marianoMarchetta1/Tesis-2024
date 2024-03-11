@@ -19,9 +19,6 @@ def generar_dataset(interval, start_time, end_time, start_date, end_date, coinba
     indicadores_tecnicos = calcular_indicadores_tecnicos(histórico_precio)
     guardar_dataset_en_csv(indicadores_tecnicos, name="indicadores_tecnicos.csv")
 
-    whale_alerts_binance = obtener_whale_alerts_binance(start_time, end_time, par, 1000, histórico_precio)
-    guardar_dataset_en_csv(whale_alerts_binance, name="whale_alerts_binance.csv")
-
     whale_alerts_coinbase = obtener_whale_alerts_coinbase(start_date, end_date, coinbase_symbol, 1000, histórico_precio)
     guardar_dataset_en_csv(whale_alerts_coinbase, name="whale_alerts_coinbase.csv")
     
@@ -29,13 +26,11 @@ def generar_dataset(interval, start_time, end_time, start_date, end_date, coinba
     histórico_precio['Open_time'] = pd.to_datetime(histórico_precio['Open_time']).dt.date
     histórico_precio_influyentes['Open_time'] = pd.to_datetime(histórico_precio_influyentes['Open_time']).dt.date
     indicadores_tecnicos['Open_time'] = pd.to_datetime(indicadores_tecnicos['Open_time']).dt.date
-    whale_alerts_binance['Open_time'] = pd.to_datetime(whale_alerts_binance['Open_time']).dt.date
     whale_alerts_coinbase['Open_time'] = pd.to_datetime(whale_alerts_coinbase['Open_time']).dt.date
     #####
     
     dataset = pd.merge(histórico_precio, histórico_precio_influyentes, on='Open_time', how='outer')
     dataset = pd.merge(dataset, indicadores_tecnicos, on='Open_time', how='outer')
-    dataset = pd.merge(dataset, whale_alerts_binance, on='Open_time', how='outer')
     dataset = pd.merge(dataset, whale_alerts_coinbase, on='Open_time', how='outer')
     
     dataset = dataset[39:] # Elimino los primeros 39 días para evitar valores NaN en los indicadores técnicos
@@ -47,6 +42,7 @@ def generar_dataset(interval, start_time, end_time, start_date, end_date, coinba
     obtener_sentimiento_moneda(par, "dataset.csv")
     obtener_sentimiento_individuos("dataset.csv")
     obtener_whale_alerts_twitter("dataset.csv")
+    obtener_whale_alerts_binance("dataset.csv", par, 1000)
 
     return dataset
 
@@ -422,29 +418,47 @@ def obtener_aggregate_trades(symbol, startTime, endTime):
 ###################################################################################################
 
 # Umbral equivale a cantidad de monedas
-def obtener_whale_alerts_binance(start_time, end_time, moneda, umbral, precio_historico):
+def obtener_whale_alerts_binance(ruta_dataset, moneda, umbral, precio_historico=None):
+    dataset = pd.read_csv(ruta_dataset)
+
+    if isinstance(dataset['Open_time'].iloc[0], str):
+        dataset['Open_time'] = pd.to_datetime(dataset['Open_time'])
+
+    start_time = int(dataset['Open_time'].iloc[0].timestamp() * 1000)
+    end_time = int((dataset['Open_time'].iloc[-1].to_pydatetime() + timedelta(days=1)).timestamp() * 1000)
+
     fecha = start_time
-    resultado = pd.DataFrame(columns=["Open_time", "Buy_1000x_high", "sell_1000x_high", "total_trades_binance"])
-
     while fecha < end_time:
-        trades = obtener_aggregate_trades(moneda, fecha, fecha + 86400000)
-        if trades:
-            fecha_formato = datetime.utcfromtimestamp(fecha / 1000).date()
-            precio_historico_filtered = precio_historico[precio_historico['Open_time'].dt.date == fecha_formato]
-            high_value = float(precio_historico_filtered['High'].max())
-            
-            print(f"Fecha sobre la que voy a calcular los whales: {fecha_formato}")
-            print(f"Fecha del mayor precio para ese dia {precio_historico['Open_time'].dt.date}")
-            print(f"Mayor precio para ese dia: {float(precio_historico_filtered['High'].max())}")
-            
-            buy_1000x_high = sum(1 for trade in trades if trade['m'] and float(trade['p']) * float(trade['q']) > high_value * umbral)
-            sell_1000x_high = sum(1 for trade in trades if not trade['m'] and float(trade['p']) * float(trade['q']) > high_value * umbral)
+        try:
+            trades = obtener_aggregate_trades(moneda, fecha, fecha + 86400000)
+            if trades:
+                fecha_formato = pd.to_datetime(fecha, unit='ms').date()
 
-            resultado.loc[len(resultado)] = [pd.to_datetime(fecha, unit='ms'), buy_1000x_high, sell_1000x_high, len(trades)]
+                if precio_historico is not None:
+                    high_value = float(precio_historico[precio_historico['Open_time'].dt.date == fecha_formato]['High'].max())
+                else:
+                    high_value = float(dataset[dataset['Open_time'].dt.date == fecha_formato]['High'].max())
+                
+                print(f"Fecha sobre la que voy a calcular los whales: {fecha_formato}")
+                print(f"Mayor precio para ese dia: {high_value}")
+                
+                buy_1000x_high = sum(1 for trade in trades if trade['m'] and float(trade['p']) * float(trade['q']) > high_value * umbral)
+                sell_1000x_high = sum(1 for trade in trades if not trade['m'] and float(trade['p']) * float(trade['q']) > high_value * umbral)
 
-        fecha += 86400000# Siguiente día en milisegundos
+                idx = dataset[dataset['Open_time'].dt.date == fecha_formato].index
+                dataset.loc[idx, ["Buy_1000x_high", "sell_1000x_high", "total_trades_binance"]] = [buy_1000x_high, sell_1000x_high, len(trades)]
+                
+        except Exception as e:
+            print(f"Error al obtener trades: {e}")
+            print("Esperando 10 segundos antes de reintentar...")
+            time.sleep(10)
+            continue
 
-    return resultado
+        fecha += 86400000
+        dataset.to_csv(ruta_dataset, index=False, float_format='%.8f')
+
+    return dataset
+
 
 ###################################################################################################
 
@@ -600,9 +614,7 @@ end_date = fecha_especifica + timedelta(days=1)
 # Calcular obtener_whale_alerts_binance
 # historico_precio = obtener_historico_precio(interval, start_time, end_time, binance_symbol)
 # print(historico_precio)
-# print(datetime.utcfromtimestamp(start_time / 1000))
-# print(datetime.utcfromtimestamp(end_time / 1000))
-# whale_alerts = obtener_whale_alerts_binance(start_time, end_time, binance_symbol, 1000, historico_precio)
+# whale_alerts = obtener_whale_alerts_binance("../whale_alerts_binance.csv", binance_symbol, 1000, historico_precio)
 # print(whale_alerts)
 
 
@@ -654,16 +666,16 @@ end_date = fecha_especifica + timedelta(days=1)
 # guardar_dataset_en_csv(dataset, 'final_dataset.csv')
 
 # Codigo para pisar ciertas columnas, utilizado luego de corregir las metricas de sentimiento
-# ruta_dataset1 = '/Users/mmarchetta/Desktop/Tesis-2024/dataset_sentimiento_general_50_paginas.csv'
-# ruta_dataset2 = '/Users/mmarchetta/Desktop/Tesis-2024/data-visualization/final_dataset.csv'
+# ruta_dataset1 = '/Users/mmarchetta/Desktop/Tesis-2024/whale_alerts_binance.csv'
+# ruta_dataset2 = '/Users/mmarchetta/Desktop/Tesis-2024/final_dataset.csv'
 
 # dataset1 = pd.read_csv(ruta_dataset1)
 # dataset2 = pd.read_csv(ruta_dataset2)
 
-# columnas_a_sobrescribir = ['Sentimiento','Tweets_Utilizados','Cantidad_post','Cantidad_neg','Cantidad_neu','Compound total']
+# columnas_a_sobrescribir = ['total_trades_binance']
 
 # # Sobrescribir las columnas de dataset2 usando dataset1
 # dataset2[columnas_a_sobrescribir] = dataset1[columnas_a_sobrescribir]
 
 # # Guardar el dataset2 sobrescrito en la misma ruta
-# dataset2.to_csv('/Users/mmarchetta/Desktop/Tesis-2024/data-visualization/final_dataset.csv', index=False, float_format='%.8f')
+# dataset2.to_csv('/Users/mmarchetta/Desktop/Tesis-2024/final_dataset.csv', index=False, float_format='%.8f')
