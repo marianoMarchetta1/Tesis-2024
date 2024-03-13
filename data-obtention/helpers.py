@@ -10,6 +10,7 @@ import requests
 from coinbase import jwt_generator
 from private_secrets import COINBASE_APY_KEY, COINBASE_APY_SECRET
 from datetime import datetime, timezone
+import pandas as pd
 
 TWT_HEADERS = {
     'authority': 'twitter.com',
@@ -196,3 +197,11 @@ def parse_datetime_string(datetime_str):
         except ValueError:
             continue
     raise ValueError("No se pudo analizar la cadena de fecha y hora")
+
+def join_datasets(ruta_dataset1, ruta_dataset2):
+    dataset1 = pd.read_csv(ruta_dataset1)
+    dataset2 = pd.read_csv(ruta_dataset2)
+    
+    merged_dataset = pd.concat([dataset1, dataset2], ignore_index=True)
+    
+    merged_dataset.to_csv(ruta_dataset2, index=False, float_format='%.8f')

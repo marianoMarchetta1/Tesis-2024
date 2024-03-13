@@ -1,6 +1,6 @@
 import os
 import time
-from helpers import TWT_FEATURES, TWT_HEADERS, build_jwt_token, get_coin_related_terms, get_next_page_token, get_overall_sentyment, get_tweet_max_sentyment, get_tweet_text, parse_datetime_string, process_response, translate_and_get_sentyment
+from helpers import TWT_FEATURES, TWT_HEADERS, build_jwt_token, get_coin_related_terms, get_next_page_token, get_overall_sentyment, get_tweet_max_sentyment, get_tweet_text, parse_datetime_string, process_response, translate_and_get_sentyment, join_datasets
 import talib;
 from datetime import datetime, timedelta, timezone
 import requests
@@ -679,3 +679,7 @@ end_date = fecha_especifica + timedelta(days=1)
 
 # # Guardar el dataset2 sobrescrito en la misma ruta
 # dataset2.to_csv('/Users/mmarchetta/Desktop/Tesis-2024/final_dataset.csv', index=False, float_format='%.8f')
+
+
+# Codigo para joinear los datasets
+# join_datasets('../previous_datasets/dataset_previous.csv', '../initial_datasets/final_dataset.csv')
