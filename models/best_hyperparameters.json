@@ -1,0 +1,1 @@
+{"best_params": {"activation": "tanh", "batch_size": 32, "dropout": 0.3, "epochs": 20, "learning_rate": 0.01, "units": 50}, "best_score": -0.011237594256515817}
