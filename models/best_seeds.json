@@ -1,0 +1,7 @@
+{
+  "{'activation': 'relu', 'batch_size': 32, 'dropout': 0.2, 'epochs': 10, 'learning_rate': 0.01, 'units': 50}": 72701,
+  "{'activation': 'relu', 'batch_size': 32, 'dropout': 0.2, 'epochs': 10, 'learning_rate': 0.01, 'units': 100}": 70991,
+  "{'activation': 'relu', 'batch_size': 32, 'dropout': 0.2, 'epochs': 10, 'learning_rate': 0.01, 'units': 150}": 70849,
+  "{'activation': 'relu', 'batch_size': 32, 'dropout': 0.2, 'epochs': 10, 'learning_rate': 0.001, 'units': 50}": 70157,
+  "{'activation': 'relu', 'batch_size': 32, 'dropout': 0.2, 'epochs': 10, 'learning_rate': 0.001, 'units': 100}": 71171
+}
