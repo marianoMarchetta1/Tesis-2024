@@ -2,47 +2,52 @@
   "best_params": [
     {
       "activation": "relu",
-      "batch_size": 32,
+      "batch_size": 128,
       "dropout": 0.2,
-      "epochs": 10,
-      "learning_rate": 0.01,
-      "units": 50
+      "epochs": 20,
+      "l2_penalty": 0.01,
+      "learning_rate": 0.0001,
+      "units": 150
     },
     {
-      "activation": "relu",
-      "batch_size": 32,
-      "dropout": 0.2,
-      "epochs": 10,
-      "learning_rate": 0.01,
-      "units": 100
-    },
-    {
-      "activation": "relu",
-      "batch_size": 32,
-      "dropout": 0.2,
-      "epochs": 10,
-      "learning_rate": 0.01,
+      "activation": "tanh",
+      "batch_size": 128,
+      "dropout": 0.4,
+      "epochs": 30,
+      "l2_penalty": 0.01,
+      "learning_rate": 0.001,
       "units": 150
     },
     {
       "activation": "relu",
       "batch_size": 32,
+      "dropout": 0.4,
+      "epochs": 30,
+      "l2_penalty": 0.01,
+      "learning_rate": 0.001,
+      "units": 150
+    },
+    {
+      "activation": "relu",
+      "batch_size": 64,
       "dropout": 0.2,
       "epochs": 10,
-      "learning_rate": 0.001,
-      "units": 50
+      "l2_penalty": 0.001,
+      "learning_rate": 0.0001,
+      "units": 150
     },
     {
       "activation": "relu",
       "batch_size": 32,
-      "dropout": 0.2,
+      "dropout": 0.3,
       "epochs": 10,
-      "learning_rate": 0.001,
-      "units": 100
+      "l2_penalty": 0.1,
+      "learning_rate": 0.0001,
+      "units": 150
     }
   ],
   "best_scores": [
-    -0.020468762380079275, -0.031123289588577806, -102.1820030484306,
-    -0.017034221045753285, -0.01505311352736538
+    -0.03986723249036641, -0.017320082783079418, -0.018638353135904017,
+    -0.038033967859191116, -0.035972588753404186
   ]
 }
