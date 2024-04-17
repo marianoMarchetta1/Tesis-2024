@@ -1,53 +1,63 @@
 {
   "best_params": [
     {
-      "activation": "relu",
+      "activation": "swish",
       "batch_size": 128,
+      "depth": 3,
       "dropout": 0.2,
       "epochs": 20,
       "l2_penalty": 0.01,
-      "learning_rate": 0.0001,
-      "units": 150
-    },
-    {
-      "activation": "tanh",
-      "batch_size": 128,
-      "dropout": 0.4,
-      "epochs": 30,
-      "l2_penalty": 0.01,
       "learning_rate": 0.001,
-      "units": 150
-    },
-    {
-      "activation": "relu",
-      "batch_size": 32,
-      "dropout": 0.4,
-      "epochs": 30,
-      "l2_penalty": 0.01,
-      "learning_rate": 0.001,
-      "units": 150
+      "optimizer": "rmsprop",
+      "units": 64
     },
     {
       "activation": "relu",
       "batch_size": 64,
+      "depth": 4,
+      "dropout": 0.2,
+      "epochs": 50,
+      "l2_penalty": 0.001,
+      "learning_rate": 0.01,
+      "optimizer": "rmsprop",
+      "units": 128
+    },
+    {
+      "activation": "swish",
+      "batch_size": 128,
+      "depth": 4,
       "dropout": 0.2,
       "epochs": 10,
       "l2_penalty": 0.001,
-      "learning_rate": 0.0001,
-      "units": 150
+      "learning_rate": 0.001,
+      "optimizer": "sgd",
+      "units": 64
     },
     {
-      "activation": "relu",
-      "batch_size": 32,
+      "activation": "swish",
+      "batch_size": 128,
+      "depth": 5,
       "dropout": 0.3,
+      "epochs": 20,
+      "l2_penalty": 0.01,
+      "learning_rate": 0.0001,
+      "optimizer": "sgd",
+      "units": 128
+    },
+    {
+      "activation": "selu",
+      "batch_size": 128,
+      "depth": 5,
+      "dropout": 0.2,
       "epochs": 10,
       "l2_penalty": 0.1,
-      "learning_rate": 0.0001,
-      "units": 150
+      "learning_rate": 0.001,
+      "optimizer": "rmsprop",
+      "units": 256
     }
   ],
   "best_scores": [
-    -0.03986723249036641, -0.017320082783079418, -0.018638353135904017,
-    -0.038033967859191116, -0.035972588753404186
+    -0.02766625692726051, -0.031976217665667626, -0.029549170450538113,
+    -0.03947803989401757, -3.6060609716367877
   ]
 }
