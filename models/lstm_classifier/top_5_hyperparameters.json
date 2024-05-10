@@ -2,62 +2,62 @@
   "best_params": [
     {
       "activation": "relu",
+      "batch_size": 64,
+      "depth": 4,
+      "dropout": 0.2,
+      "epochs": 30,
+      "l2_penalty": 0.01,
+      "learning_rate": 0.0001,
+      "optimizer": "adam",
+      "units": 64
+    },
+    {
+      "activation": "selu",
       "batch_size": 32,
       "depth": 4,
-      "dropout": 0.1,
-      "epochs": 100,
+      "dropout": 0.4,
+      "epochs": 20,
       "l2_penalty": 0.1,
       "learning_rate": 0.01,
-      "optimizer": "rmsprop",
+      "optimizer": "sgd",
       "units": 128
     },
     {
       "activation": "relu",
-      "batch_size": 32,
+      "batch_size": 64,
       "depth": 5,
-      "dropout": 0.3,
-      "epochs": 30,
+      "dropout": 0.4,
+      "epochs": 20,
       "l2_penalty": 0.1,
       "learning_rate": 0.0001,
       "optimizer": "sgd",
       "units": 64
     },
     {
-      "activation": "swish",
-      "batch_size": 32,
-      "depth": 4,
-      "dropout": 0.4,
-      "epochs": 100,
-      "l2_penalty": 0.01,
-      "learning_rate": 0.001,
-      "optimizer": "sgd",
-      "units": 256
-    },
-    {
-      "activation": "swish",
-      "batch_size": 64,
+      "activation": "relu",
+      "batch_size": 128,
       "depth": 3,
       "dropout": 0.3,
-      "epochs": 10,
+      "epochs": 50,
       "l2_penalty": 0.1,
       "learning_rate": 0.001,
       "optimizer": "sgd",
-      "units": 128
+      "units": 512
     },
     {
-      "activation": "swish",
-      "batch_size": 128,
-      "depth": 2,
-      "dropout": 0.1,
-      "epochs": 20,
-      "l2_penalty": 0.001,
+      "activation": "selu",
+      "batch_size": 32,
+      "depth": 4,
+      "dropout": 0.3,
+      "epochs": 100,
+      "l2_penalty": 0.01,
       "learning_rate": 0.0001,
       "optimizer": "sgd",
-      "units": 512
+      "units": 256
     }
   ],
   "best_scores": [
-    1.1057941069737893, 1.3284329727438409, 2.057655166026172,
-    1.4302739278470187, 1.2735166135142517
+    1.157736949168703, 1.1129858996812934, 1.1185720457866446,
+    2.2327541293501865, 1.6436253941999612
   ]
 }
