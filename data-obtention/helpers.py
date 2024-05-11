@@ -1,7 +1,6 @@
 import json
 import logging
 import time
-from googletrans import Translator
 from deep_translator import GoogleTranslator
 import nltk
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
