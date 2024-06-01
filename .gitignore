@@ -167,3 +167,4 @@ models/auto_timeseries_models/
 models/h2o_models/
 models/auto_timeseries_models_prophet/
 models/skforecast/
+models/darts_logs/
